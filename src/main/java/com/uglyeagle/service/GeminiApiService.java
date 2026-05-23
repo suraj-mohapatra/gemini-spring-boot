@@ -16,63 +16,68 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Service
 public class GeminiApiService {
 
-	@Value("${google.api.key}")
-	private String apiKey;
+    @Value("${google.api.key}")
+    private String apiKey;
 
-	public JsonNode getResponse(MultipartFile file, String prompt) throws Exception {
-		String fileUri = uploadFileToGoogle(file);
-		return generateContent(fileUri, prompt);
-	}
+    @Value("${google.api.upload-url}")
+    private String uploadUrl;
 
-	private String uploadFileToGoogle(MultipartFile file) throws Exception {
-		String uploadUrl = "https://generativelanguage.googleapis.com/upload/v1beta/files?key=" + apiKey;
+    @Value("${google.api.generate-url}")
+    private String generateUrl;
 
-		HttpHeaders startHeaders = new HttpHeaders();
-		startHeaders.set("X-Goog-Upload-Protocol", "resumable");
-		startHeaders.set("X-Goog-Upload-Command", "start");
-		startHeaders.set("X-Goog-Upload-Header-Content-Length", String.valueOf(file.getSize()));
-		startHeaders.set("X-Goog-Upload-Header-Content-Type", file.getContentType());
-		startHeaders.setContentType(MediaType.APPLICATION_JSON);
+    public JsonNode getResponse(MultipartFile file, String prompt) throws Exception {
+        String fileUri = uploadFileToGoogle(file);
+        return generateContent(fileUri, prompt);
+    }
 
-		String jsonBody = "{\"file\": {\"display_name\": \"" + file.getOriginalFilename() + "\"}}";
+    private String uploadFileToGoogle(MultipartFile file) throws Exception {
+        String requestUrl = uploadUrl + "?key=" + apiKey;
 
-		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<String> startRequest = new HttpEntity<>(jsonBody, startHeaders);
-		ResponseEntity<String> startResponse = restTemplate.exchange(uploadUrl, HttpMethod.POST, startRequest,
-				String.class);
+        HttpHeaders startHeaders = new HttpHeaders();
+        startHeaders.set("X-Goog-Upload-Protocol", "resumable");
+        startHeaders.set("X-Goog-Upload-Command", "start");
+        startHeaders.set("X-Goog-Upload-Header-Content-Length", String.valueOf(file.getSize()));
+        startHeaders.set("X-Goog-Upload-Header-Content-Type", file.getContentType());
+        startHeaders.setContentType(MediaType.APPLICATION_JSON);
 
-		String sessionUri = startResponse.getHeaders().getFirst("X-Goog-Upload-URL");
-		if (sessionUri == null || sessionUri.isEmpty()) {
-			throw new Exception("Failed to obtain upload session URI.");
-		}
+        String jsonBody = "{\"file\": {\"display_name\": \"" + file.getOriginalFilename() + "\"}}";
 
-		HttpHeaders uploadHeaders = new HttpHeaders();
-		uploadHeaders.set("X-Goog-Upload-Protocol", "resumable");
-		uploadHeaders.set("X-Goog-Upload-Command", "upload, finalize");
-		uploadHeaders.set("X-Goog-Upload-Offset", "0");
-		uploadHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        RestTemplate restTemplate = new RestTemplate();
+        HttpEntity<String> startRequest = new HttpEntity<>(jsonBody, startHeaders);
+        ResponseEntity<String> startResponse = restTemplate.exchange(requestUrl, HttpMethod.POST, startRequest,
+                String.class);
 
-		HttpEntity<byte[]> uploadRequest = new HttpEntity<>(file.getBytes(), uploadHeaders);
-		ResponseEntity<String> uploadResponse = restTemplate.exchange(sessionUri, HttpMethod.POST, uploadRequest,
-				String.class);
+        String sessionUri = startResponse.getHeaders().getFirst("X-Goog-Upload-URL");
+        if (sessionUri == null || sessionUri.isEmpty()) {
+            throw new Exception("Failed to obtain upload session URI.");
+        }
 
-		return new ObjectMapper().readTree(uploadResponse.getBody()).path("file").path("uri").asText();
-	}
+        HttpHeaders uploadHeaders = new HttpHeaders();
+        uploadHeaders.set("X-Goog-Upload-Protocol", "resumable");
+        uploadHeaders.set("X-Goog-Upload-Command", "upload, finalize");
+        uploadHeaders.set("X-Goog-Upload-Offset", "0");
+        uploadHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
 
-	public JsonNode generateContent(String fileUri, String prompt) throws Exception {
-		String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key="
-				+ apiKey;
+        HttpEntity<byte[]> uploadRequest = new HttpEntity<>(file.getBytes(), uploadHeaders);
+        ResponseEntity<String> uploadResponse = restTemplate.exchange(sessionUri, HttpMethod.POST, uploadRequest,
+                String.class);
 
-		String requestBody = "{ \"contents\": [ { \"role\": \"user\", \"parts\": [ { \"fileData\": { \"fileUri\": \""
-				+ fileUri + "\" } }, { \"text\": \"" + prompt + "\" } ] } ] }";
+        return new ObjectMapper().readTree(uploadResponse.getBody()).path("file").path("uri").asText();
+    }
 
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
+    public JsonNode generateContent(String fileUri, String prompt) throws Exception {
+        String requestUrl = generateUrl + "?key=" + apiKey;
 
-		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
-		ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+        String requestBody = "{ \"contents\": [ { \"role\": \"user\", \"parts\": [ { \"fileData\": { \"fileUri\": \""
+                + fileUri + "\" } }, { \"text\": \"" + prompt + "\" } ] } ] }";
 
-		return new ObjectMapper().readTree(response.getBody());
-	}
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        RestTemplate restTemplate = new RestTemplate();
+        HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<String> response = restTemplate.postForEntity(requestUrl, entity, String.class);
+
+        return new ObjectMapper().readTree(response.getBody());
+    }
 }

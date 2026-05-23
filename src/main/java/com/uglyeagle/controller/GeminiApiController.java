@@ -19,44 +19,44 @@ import com.uglyeagle.service.GeminiApiService;
 @RequestMapping("/gemini")
 public class GeminiApiController {
 
-	private static final Logger logger = Logger.getLogger(GeminiApiController.class.getName());
+    private static final Logger logger = Logger.getLogger(GeminiApiController.class.getName());
 
-	@Autowired
-	private GeminiApiService geminiApiService;
+    @Autowired
+    private GeminiApiService geminiApiService;
 
-	@PostMapping("/process-image")
-	public ResponseEntity<HashMap<String, Object>> processImage(@RequestParam("file") MultipartFile file,
-			@RequestParam("prompt") String prompt) {
+    @PostMapping("/process-image")
+    public ResponseEntity<HashMap<String, Object>> processImage(@RequestParam("file") MultipartFile file,
+                                                                @RequestParam("prompt") String prompt) {
 
-		logger.info("\n\nINSIDE CLASS == GeminiApiController, METHOD == processImage(); ");
+        logger.info("\n\nINSIDE CLASS == GeminiApiController, METHOD == processImage(); ");
 
-		try {
-			JsonNode result = geminiApiService.getResponse(file, prompt);
+        try {
+            JsonNode result = geminiApiService.getResponse(file, prompt);
 
-			if (result != null) {
-				logger.info("\nImage processed successfully.");
-				logger.info("\nEXITING METHOD == processImage() OF CLASS == GeminiApiController \n\n");
-				return getResponseFormat(HttpStatus.OK, "Image processed successfully", result);
-			} else {
-				logger.info("\nImage processing failed.");
-				logger.info("\nEXITING METHOD == processImage() OF CLASS == GeminiApiController \n\n");
-				return getResponseFormat(HttpStatus.INTERNAL_SERVER_ERROR, "Image processing failed", null);
-			}
-		} catch (Exception e) {
-			logger.severe("\nError in processImage() method of GeminiApiController: " + e.getMessage());
-			logger.info("\nEXITING METHOD == processImage() OF CLASS == GeminiApiController \n\n");
-			return getResponseFormat(HttpStatus.INTERNAL_SERVER_ERROR, "Critical Error: " + e.getLocalizedMessage(),
-					null);
-		}
-	}
+            if (result != null) {
+                logger.info("\nImage processed successfully.");
+                logger.info("\nEXITING METHOD == processImage() OF CLASS == GeminiApiController \n\n");
+                return getResponseFormat(HttpStatus.OK, "Image processed successfully", result);
+            } else {
+                logger.info("\nImage processing failed.");
+                logger.info("\nEXITING METHOD == processImage() OF CLASS == GeminiApiController \n\n");
+                return getResponseFormat(HttpStatus.INTERNAL_SERVER_ERROR, "Image processing failed", null);
+            }
+        } catch (Exception e) {
+            logger.severe("\nError in processImage() method of GeminiApiController: " + e.getMessage());
+            logger.info("\nEXITING METHOD == processImage() OF CLASS == GeminiApiController \n\n");
+            return getResponseFormat(HttpStatus.INTERNAL_SERVER_ERROR, "Critical Error: " + e.getLocalizedMessage(),
+                    null);
+        }
+    }
 
-	public ResponseEntity<HashMap<String, Object>> getResponseFormat(HttpStatus status, String message, Object data) {
-		int responseStatus = (status.equals(HttpStatus.OK)) ? 1 : 0;
+    public ResponseEntity<HashMap<String, Object>> getResponseFormat(HttpStatus status, String message, Object data) {
+        int responseStatus = (status.equals(HttpStatus.OK)) ? 1 : 0;
 
-		HashMap<String, Object> map = new HashMap<>();
-		map.put("responseCode", responseStatus);
-		map.put("message", message);
-		map.put("data", data);
-		return ResponseEntity.status(status).body(map);
-	}
+        HashMap<String, Object> map = new HashMap<>();
+        map.put("responseCode", responseStatus);
+        map.put("message", message);
+        map.put("data", data);
+        return ResponseEntity.status(status).body(map);
+    }
 }

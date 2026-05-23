@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: gemini-spring-boot
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+server:
+  port: 8080
+
+google:
+  api:
+    key: xxx
+    upload-url: https://generativelanguage.googleapis.com/upload/v1beta/files
+    generate-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent
